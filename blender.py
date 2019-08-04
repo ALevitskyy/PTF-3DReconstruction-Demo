@@ -5,9 +5,19 @@
 
 import bpy
 import pickle
-from config import path_to_texture, root, path_to_position, output_folder, model_folder
+from config import path_to_texture, root, path_to_position, output_folder, model_folder,\
+                   uv_path, texture_path
 
-def material_for_texture(fname):
+with open(uv_path,"rb") as f:
+    uv_map = pickle.load(f)
+
+def add_uv_to_obj(ob):
+    new_obj = ob.data.uv_layers.active.data
+    for i in range(len(uv_map)):
+        new_obj[i].uv.x = uv_map[i][0]
+        new_obj[i].uv.y = uv_map[i][1]
+
+def material_for_texture(fname, canvas = True):
     img = bpy.data.images.load(fname)
     
     tex = bpy.data.textures.new(fname, 'IMAGE')
@@ -17,10 +27,12 @@ def material_for_texture(fname):
     mat.texture_slots.add()
     ts = mat.texture_slots[0]
     ts.texture = tex
-    ts.texture_coords = "ORCO"
-    ts.uv_layer = "default"
-    
+    if canvas:
+        ts.texture_coords = "ORCO"
+        ts.uv_layer = "default"
     return mat
+
+
 
 def import_object(file_loc):
     imported_object = bpy.ops.import_scene.obj(filepath=file_loc)
@@ -35,6 +47,16 @@ def position_obj(path_to_obj,loc):
     obj.location = obj.location + Vector((loc[0], loc[1], 0))
     return obj
 
+def assign_material_to_ob(ob, mat):
+    if ob.data.materials:
+        ob.data.materials[0] = mat
+    else:
+    # no slots
+        ob.data.materials.append(mat)
+
+
+fighter_texture = material_for_texture(texture_path, canvas=False)
+
 bpy.ops.mesh.primitive_plane_add(radius=5, view_align=False, location=(0, 0, 0))
 plane = bpy.data.objects["Plane"]
 
@@ -48,11 +70,7 @@ mat = material_for_texture(path_to_texture)
 ob.select = False
 
 # Assign it to object
-if ob.data.materials:
-    ob.data.materials[0] = mat
-else:
-    # no slots
-    ob.data.materials.append(mat)
+assign_material_to_ob(ob, mat)
 
 with open(path_to_position,"rb") as file:
     locs = pickle.load(file)
@@ -62,6 +80,9 @@ for i in range(len(locs)):
     path_to_obj = root+model_folder+"/"+str(i)+".obj"
     path_to_frame = root+output_folder+"/"+str(i).zfill(8)
     obj = position_obj(path_to_obj, loc)
+    obj.data.uv_textures.new("map1")
+    assign_material_to_ob(obj, fighter_texture)
+    add_uv_to_obj(obj)
     bpy.context.scene.render.filepath = path_to_frame
     bpy.ops.render.render( write_still=True )
     obj.select = True
