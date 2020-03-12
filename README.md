@@ -1,3 +1,5 @@
+# Code to reproduce the demo video https://www.youtube.com/watch?v=6jXD2oImpSs
+
 # Instruction
 
 1. Download assets from https://al-deeplearn.s3.amazonaws.com/assets.zip and unpack
